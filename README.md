@@ -1,115 +1,132 @@
-# Legba — the access layer for AI agents on the open web
+# Legba
 
-Your agent hits a site. The site blocks cloud infrastructure, or asks it to prove it is a person.
-Legba is one skill that gets it through: a residential exit, then a real browser, then a browser a
-**human can take over** when the site asks for something only a person has.
+Your agent gets onto the sites that block it. When it hits a captcha or a 2FA prompt, you finish that one step in the same browser and hand it back.
 
-**What this needs to work:** a Legba API key. The exits and the hosted browser are a service we run,
-so the scripts here are a client for it and do nothing on their own. The Free plan needs no card and
-covers rungs 1 and 2 — one residential exit at a time. If you would rather not have an account, this
-skill is not useful to you, and that is a fair place to stop reading.
+Legba is the web access layer for AI agents. It gives your agent a residential exit, local browsers for harder sites, and a hosted browser when a step needs a person. The agent starts with the lightest method and escalates only when the site forces it.
 
-```
-/plugin install legba --marketplace legba-app/skills
-```
+Use it two ways: as an agent skill (Claude Code, OpenClaw, Hermes, Meta Muse, and other skill-compatible agents) or over MCP for the hosted browser tools.
 
-Not on Claude Code? See [Install](#install) — one line for any agent, or a plain `git clone`.
+---
 
-Then give your agent a key. `SKILL.md` is written for the agent, not for you: it tells it which rung
-to start on, when to climb, and what to do if there is no key yet.
+## Quick start
 
-## Four rungs, lightest first
+### 1. Get a key
 
-| | Rung | What it is |
-|-|-|-|
-| 1 | **residential exit** | a plain fetch from a residential IP — most "blocked" pages are only blocking the datacenter |
-| 2 | **headless browser** | Playwright for pages that need JavaScript |
-| 3 | **anti-detect browser** | Camoufox, a real Firefox with a hardened fingerprint, for serious anti-bot |
-| 4 | **hosted browser** | a stealth browser on our infrastructure, behind a residential exit, **that your user can take over** |
+Sign up at [app.legba.xyz](https://app.legba.xyz) and copy your key. The Free plan covers rungs 1 to 3.
 
-The agent climbs only as far as the site forces it, and each rung reports a distinct exit code so it
-knows whether to climb or stop.
+export LEGBA_API_KEY='lk_...'
+Using only the skill? You can skip this. The first time a script runs without a key, it asks once and saves it to ~/.config/legba-proxy/api-key (permissions 600). Using MCP? Export the key first, because the MCP setup command reads it.
 
-## The human handoff
+### 2. Install the skill
 
-Most of this is ordinary: proxies and headless browsers are not new. Rung 4 is the part worth reading
-about. Every proxy product gives up at the captcha — the agent is stuck, the run dies, and your user
-finds out later.
+npx skills add legba-app/skills -g
+Pick your agent when prompted, or name it: -a claude-code, -a openclaw, -a hermes-agent. Requires Node.js 22.20 or later.
 
-Here the agent hands over **the same browser** — same page, same cookies, same session — to the
-person. They solve the captcha, enter the 2FA code, finish the login. Then they hand it back and the
-agent carries on from exactly where it stopped. Nothing is transferred, nothing is re-done.
+Manual install (Claude Code)
 
-## Install
+git clone https://github.com/legba-app/skills ~/.claude/skills/legba
+For any other agent, clone the repo into that agent's skills directory. SKILL.md sits at the root, so the folder works as-is.
 
-**Claude Code** — one step:
+### 3. Try it
 
-```
-/plugin install legba --marketplace legba-app/skills
-```
+Ask your agent:
 
-Or from your shell:
+> Use Legba to fetch https://example.com and tell me the page title.
 
-```
-claude plugin marketplace add legba-app/skills
-claude plugin install legba@legba
-```
+That confirms the setup. To see what Legba is for, point it at a page your agent normally can't reach.
 
-**Any agent** — the installer finds the ones you have and installs into each:
+---
 
-```
-curl -fsSL https://raw.githubusercontent.com/legba-app/skills/main/install.sh | sh
-```
+## How it works
 
-```
-npx legba-skill
-```
+Four rungs, lightest first. The agent climbs only as far as the site requires.
 
-Both take an explicit path if you would rather say where:
-`... | sh -s -- ~/.claude/skills/legba`, or `npx legba-skill ~/.claude/skills/legba`.
+| Rung | Where it runs | Use it when |
+|---|---|---|
+| 1. Residential exit | curl through a residential IP | The site rejects cloud or datacenter traffic |
+| 2. Headless Chromium | Your machine, through the residential exit | The page needs JavaScript |
+| 3. Hardened Firefox (Camoufox) | Your machine, through the residential exit | The site runs a stronger browser check |
+| 4. Hosted browser | Legba's infrastructure, behind a residential exit | Rungs 1 to 3 fail, your machine can't run a browser, or a person needs to step in |
 
-**By hand** — it is a `SKILL.md` and a `scripts/` directory; clone it wherever your agent looks:
+### Human handoff, same session
 
-| Agent | Path |
-|-|-|
-| Claude Code / Claude Desktop | `~/.claude/skills/legba` |
-| OpenClaw | `~/.openclaw/skills/legba` |
-| Hermes | `~/.hermes/skills/legba` |
-| Meta Muse | `~/.muse/skills/legba` |
+When automation reaches a step that needs you, like a captcha, a login, or a one-time code, Legba hands you a link to the same hosted browser. You finish the step and hand control back. The page, cookies, and session all stay intact, and the agent picks up where you left off.
 
-```
-git clone https://github.com/legba-app/skills.git ~/.claude/skills/legba
-```
+The agent never types your credentials. Anything that authenticates a person goes to the person.
 
-Node and curl cover rungs 1 and 4. Rung 2 wants Playwright, rung 3 wants Camoufox — `SKILL.md` has
-the one-liners, and each script says so itself and tells the agent to climb rather than fight an
-install it cannot win.
+### A browser for you
 
-## Getting a key
+On Pro, the same key opens a clean browser for you to use directly: Chrome, Brave, Firefox, or Tor. Your agent can't drive it. Note that it exits through a Legba address, not a residential one.
 
-1. Sign up: **https://app.legba.xyz/signup** — the Free plan needs no card.
-2. Create & copy your key: **https://app.legba.xyz/api-key**
-3. Save it once:
+---
 
-```
-mkdir -p ~/.config/legba && printf '%s\n' 'lk_YOUR_KEY' > ~/.config/legba/api-key && chmod 600 ~/.config/legba/api-key
-```
+## Connect over MCP
 
-One key covers every rung. The plan behind it decides how many exits you may hold at once and whether
-the hosted browser is included; Free gets one residential exit at a time, which is rungs 1 and 2 in
-full. When the agent asks for something the plan does not cover it gets a `402` saying so, and stops
-— it will not spend anything on your behalf.
+MCP provides the hosted browser and handoff tools (rung 4), which require Pro. The Free plan does not include hosted sessions.
 
-## Using it without an agent
+URL:     https://skill.legba.xyz/mcp
+Header:  Authorization: Bearer <LEGBA_API_KEY>
+Claude Code (with LEGBA_API_KEY exported; the key is saved to your local Claude config):
 
-The scripts are plain Node and Python; nothing stops you running them yourself.
+claude mcp add --scope user --transport http legba https://skill.legba.xyz/mcp \
+  --header "Authorization: Bearer $LEGBA_API_KEY"
+Tools: start_session, current_session, end_session, navigate, read_page, click, type, screenshot, wait, request_human, wait_for_human, resume.
 
-```
-node scripts/legba-proxy.mjs fetch https://example.com
-python3 scripts/antibot.py https://example.com --mode proxy --country US --out page.html
-node scripts/legba-session.mjs start --kind browser
-```
+Skill vs. MCP. MCP gives you the hosted browser and human handoff (rung 4). The local rungs (Chromium and Camoufox) come with the skill and need an agent that can run local commands. For the full ladder, install the skill.
 
-## Licence
+---
 
-MIT — see [LICENSE](LICENSE).
+## Plans
+
+| | Free | Pro |
+|---|---|---|
+| Residential exit (rung 1) | Included | Included |
+| Headless Chromium (rung 2) | Included, local setup | Included |
+| Hardened Firefox (rung 3) | Included, local setup | Included |
+| Hosted browser and human handoff (rung 4) | Not included | Included |
+| Price | $0 | $500/month flat, no bandwidth meter |
+
+If a task needs rung 4 on Free, the agent tells you and links the upgrade instead of retrying.
+
+Running parallel sessions, production volume, or a dedicated deployment? Email [phillip@legba.app](mailto:phillip@legba.app).
+
+---
+
+## Local setup (rungs 2 and 3)
+
+Rung 1 needs only Node.js and curl. Rung 4 runs on Legba's side and installs nothing locally. Rungs 2 and 3 need a one-time setup:
+
+SKILL=~/.claude/skills/legba   # or wherever your agent installed it
+
+# Rung 2: Playwright and Chromium
+cd "$SKILL/scripts" && npm i playwright && npx playwright install chromium
+
+# Rung 3: Camoufox (about 2.5 GB the first time)
+python3 -m pip install --user 'camoufox[geoip]'
+python3 -m camoufox fetch
+If your machine can't run a local browser, skip both and use rung 4.
+
+---
+
+## Good habits
+
+- End the session when done. Ask your agent to end the active Legba session, or run node /path/to/legba/scripts/legba-session.mjs end from a terminal. Each account runs one live session at a time.
+- Reuse one exit across related requests instead of opening one per URL.
+- Check the content, not the status code. A challenge page can come back as a 200. Confirm the agent got the page it asked for.
+- Ask for a human only when a human is actually needed.
+
+## Troubleshooting
+
+- No key found: set LEGBA_API_KEY or check ~/.config/legba-proxy/api-key. MCP clients need the key in their own header config.
+- Upgrade needed (402): the step needs rung 4, which isn't on Free. Upgrade or stop there.
+- Rung 2 or 3 won't start: first check that you completed the local setup above. If your environment cannot install or launch the browser, use rung 4 (Pro) instead of repeating an installation that cannot succeed.
+
+## Security and responsible use
+
+For authorized use on public sites and accounts you control. You are responsible for following applicable law and the terms of the sites you access.
+
+Keep your key out of repos, logs, and support tickets, and rotate it from the dashboard if it leaks. A hosted session's view link carries its own access token. Share it only with the person taking over, and end the session when the work is done.
+
+---
+
+[legba.app](https://legba.app) · [Dashboard](https://app.legba.xyz) · [phillip@legba.app](mailto:phillip@legba.app)
