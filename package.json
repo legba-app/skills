@@ -1,0 +1,12 @@
+{
+  "name": "legba-skill",
+  "version": "1.0.0",
+  "description": "Get an agent onto sites that block it: a residential exit, then a real browser, then a browser a person can take over mid-task and hand back.",
+  "bin": { "legba-skill": "bin/legba-skill.mjs" },
+  "files": ["bin", "scripts", "SKILL.md", "install.sh", ".claude-plugin"],
+  "repository": { "type": "git", "url": "git+https://github.com/legba-app/skills.git" },
+  "homepage": "https://legba.xyz",
+  "license": "MIT",
+  "keywords": ["claude", "skill", "agent", "proxy", "residential", "browser", "anti-bot", "captcha"],
+  "engines": { "node": ">=18" }
+}

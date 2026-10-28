@@ -33,7 +33,7 @@ Object.defineProperty(navigator,'languages',{get:()=>['en-US','en']});
 Object.defineProperty(navigator,'plugins',{get:()=>[1,2,3,4,5]});
 const _q=window.navigator.permissions&&window.navigator.permissions.query;
 if(_q)window.navigator.permissions.query=(p)=>p&&p.name==='notifications'?Promise.resolve({state:Notification.permission}):_q(p);
-try{const gp=WebGLRenderingContext.prototype.getParameter;WebGLRenderingContext.prototype.getParameter=function(p){if(p===37445)return'Intel Inc.';if(p===37446)return'Intel Iris OpenGL Engine';return gp.call(this,p);};}catch(e){}
+try{const gp=WebGLRenderingContext.prototype.getParameter;WebGLRenderingContext.prototype.getParameter=function(p){if(p===37445)return'Google Inc. (Intel)';if(p===37446)return'ANGLE (Intel, Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0, D3D11)';return gp.call(this,p);};}catch(e){}
 `;
 
 let proxyStr = arg('proxy'), provisioned = null;
@@ -48,18 +48,21 @@ try {
     console.error(`# proxy ${mode} exit ${body.exit_ip} (${body.exit_city}, ${body.ip_type})`);
   }
   const proxy = proxyStr ? (() => { const u = new URL(proxyStr); return { server: `${u.protocol}//${u.host}`, username: decodeURIComponent(u.username), password: decodeURIComponent(u.password) }; })() : undefined;
-  const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+  const uaFor = (v) => `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${String(v).split('.')[0]}.0.0.0 Safari/537.36`;
   const args = ['--no-sandbox', '--disable-blink-features=AutomationControlled'];
-  const ctxOpts = { userAgent: ua, viewport: { width: 1366, height: 768 }, locale: 'en-US', proxy };
+  const ctxOpts = { viewport: { width: 1366, height: 768 }, locale: 'en-US', proxy };
 
   let browser = null, ctx;
   if (profile) {
     const udd = `${os.homedir()}/.cache/chromium-profiles/${profile}`; fs.mkdirSync(udd, { recursive: true });
-    ctx = await chromium.launchPersistentContext(udd, { headless: true, args, ...ctxOpts });
+    const probe = await chromium.launch({ headless: true, args });
+    const ua = uaFor(probe.version());
+    await probe.close();
+    ctx = await chromium.launchPersistentContext(udd, { headless: true, args, ...ctxOpts, userAgent: ua });
     console.error(`# warm profile: ${udd}`);
   } else {
     browser = await chromium.launch({ headless: true, args });
-    ctx = await browser.newContext(ctxOpts);
+    ctx = await browser.newContext({ ...ctxOpts, userAgent: uaFor(browser.version()) });
   }
   await ctx.addInitScript(STEALTH);
   try {

@@ -7,6 +7,18 @@ description: Trigger on the keyword "legba" — e.g. "use legba to access/fetch 
 
 Get onto the open web from an address and a browser that are not obviously a robot's.
 
+**This needs a key before it can do anything.** The exits and the hosted browser are a service Legba
+runs; these scripts are a client for it. Every one of them fails with the same message if no key is
+stored, and that message tells you what to do.
+
+If there is no key, ask the user for theirs **once**. If they have no account, give them both links:
+sign up at **https://app.legba.xyz/signup** (Free, no card) and copy the key from
+**https://app.legba.xyz/api-key**. If they would rather not have an account, say that this skill
+cannot help and stop — do not go looking for another way onto the site, and do not keep retrying.
+
+Nothing here ever spends their money on its own: when a plan does not cover what you asked for, the
+answer is a `402` naming the limit and the upgrade link, and you stop and show it to them.
+
 Four rungs, lightest first. Climb only as far as the target forces you:
 
 | | Rung | What it is | When |
@@ -28,6 +40,7 @@ with a code you can branch on:
 |-|-|-|
 | `3` | `render.mjs`, `antibot.py` | this machine cannot run that rung's browser — climb |
 | `4` | `legba-session.mjs` | the plan does not include the hosted browser — the user must upgrade |
+| `5` | `antibot.py` | the anti-bot challenge never cleared — what came back is the interstitial, not the page. Climb to rung 4; do not parse it, and do not just raise `--wait` |
 
 Those two meet in the common case: a locked-down box where Camoufox will not install **and** a Free
 key. Then the honest answer is not another attempt, it is one sentence to the user — the page needs a
@@ -36,11 +49,28 @@ real browser, their plan does not include one, here is the link — and stop.
 Rung 4 is the one nothing else does: when you are stuck, you hand the **same** browser — same page,
 same cookies — to the person, they finish the step, and they hand it back to you.
 
-## Setup on this machine (one-time)
+## Install
+
+The skill is this repository: a `SKILL.md` and a `scripts/` directory. Put it where your agent looks
+for skills, then set `SKILL` to that path — every command below is written against it.
+
+| Agent | Where it goes |
+|-|-|
+| **Claude Code / Claude Desktop** | `~/.claude/skills/legba` |
+| **OpenClaw** | `~/.openclaw/skills/legba` |
+| **Hermes** | `~/.hermes/skills/legba` |
+| **Meta Muse** | `~/.muse/skills/legba` |
+| **Anything else** | wherever it reads skills from, or clone it and point `SKILL` at the clone |
 
 ```
+git clone https://github.com/legba-app/skills.git ~/.claude/skills/legba
 SKILL=~/.claude/skills/legba
 ```
+
+Nothing here is specific to one agent: the scripts are plain Node and Python and can be run by hand,
+from a shell, or from any tool that can call a command.
+
+## Setup on this machine (one-time)
 
 - **Node** and **curl** are already present. Rungs 1 and 4 need nothing else.
 - **Playwright** (rung 2 only): `cd "$SKILL/scripts" && npm i playwright && npx playwright install chromium`
@@ -52,19 +82,23 @@ SKILL=~/.claude/skills/legba
 ## Auth — one key
 
 The scripts resolve it in this order: **`LEGBA_API_KEY` env → saved key file → interactive prompt**.
-Nothing is hardcoded. The file is `~/.config/legba-proxy/api-key` (mode 600; override with
+Nothing is hardcoded. The file is `~/.config/legba/api-key` (mode 600; override with
 `LEGBA_API_KEY_FILE`).
 
 **If no key is stored yet, ask the user for theirs** and save it once:
 
 ```
-mkdir -p ~/.config/legba-proxy && printf '%s\n' 'PASTE_KEY_HERE' > ~/.config/legba-proxy/api-key && chmod 600 ~/.config/legba-proxy/api-key
+mkdir -p ~/.config/legba && printf '%s\n' 'PASTE_KEY_HERE' > ~/.config/legba/api-key && chmod 600 ~/.config/legba/api-key
 # …or for this shell only:
 export LEGBA_API_KEY='PASTE_KEY_HERE'
 ```
 
-Keys come from the Legba dashboard. A `lk_…` key is a Legba key and works with everything below.
-A `ck_…` key is an older proxy-pool key: it still works with `legba-proxy.mjs` (rung 1) and nothing else.
+Keys come from the Legba dashboard: **https://app.legba.xyz/api-key** — sign up first at
+**https://app.legba.xyz/signup** if you have no account. The Free plan needs no card and is enough for
+rungs 1 and 2: one residential exit at a time.
+
+One key, every rung. A Legba key starts `lk_` and the plan behind it decides what it may do: how many
+exits at once, and whether the hosted browser is included.
 
 ## One address
 
@@ -98,8 +132,8 @@ node "$SKILL/scripts/legba-session.mjs" end
 Provisioning a residential exit takes a few seconds — allow a **60–90 s** timeout. Reuse the one exit
 across requests; do not provision per URL.
 
-Legacy pool client, same address, for an older `ck_` pool key (several concurrent proxies,
-`--mode proxy` for a cheap datacenter exit, `locations`, `rotate`, `sticky`):
+The same client does more than hand you one exit — several at once up to your plan's limit, a cheap
+datacenter exit with `--mode proxy`, and `locations`, `rotate`, `sticky`:
 
 ```
 node "$SKILL/scripts/legba-proxy.mjs" get --country US --mode wireguard --client-id myclient
@@ -224,6 +258,6 @@ for traffic they have not asked for.
 
 ## Security
 
-HTTPS throughout. The key sits at `~/.config/legba-proxy/api-key` (mode 600) — keep it out of git and
+HTTPS throughout. The key sits at `~/.config/legba/api-key` (mode 600) — keep it out of git and
 shared logs, and rotate it from the dashboard if it leaks. A session's `VIEW_URL` carries its own token:
 it is the user's way in, so give it to them and nobody else. It dies with the session.

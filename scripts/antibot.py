@@ -6,7 +6,7 @@
 #   python3 antibot.py <url> --mode wireguard --profile acme          # WARM persistent profile (keeps cf_clearance)
 #   python3 antibot.py <url> --proxy http://u:p@host:port             # reuse a proxy you hold
 #   [--wait 35000] [--out page.html] [--screenshot shot.png]
-import sys, os, json, time, argparse, urllib.request, glob
+import sys, os, json, time, argparse, urllib.request, urllib.error, glob
 from urllib.parse import urlparse
 
 def _cf_libpath():
@@ -23,6 +23,10 @@ if _lp:
     os.environ["LD_LIBRARY_PATH"] = _lp + (":" + os.environ["LD_LIBRARY_PATH"] if os.environ.get("LD_LIBRARY_PATH") else "")
 
 NO_LOCAL_BROWSER_EXIT = 3
+# The challenge was still on the page when the clock ran out. Its own code,
+# because the page that comes back is the interstitial and not the answer: an
+# agent that read a zero here would carry the challenge on as if it were data.
+CHALLENGE_UNCLEARED_EXIT = 5
 
 
 def no_local_browser(reason):
@@ -62,7 +66,8 @@ CHALLENGE_MARKERS = ("just a moment", "attention required", "checking your brows
                      "challenge-platform", "cf-chl", "_cf_chl")
 API = os.environ.get("LEGBA_BASE") or os.environ.get("LEGBA_API_BASE") or "https://skill.legba.xyz"
 
-KEY_FILE = os.environ.get("LEGBA_API_KEY_FILE") or os.environ.get("LEGBA_API_KEY_FILE") or os.path.expanduser("~/.config/legba-proxy/api-key")
+KEY_FILE = (os.environ.get("LEGBA_API_KEY_FILE") or os.environ.get("LEGBA_PROXY_API_KEY_FILE")
+            or os.path.expanduser("~/.config/legba/api-key"))
 API_KEY = None
 
 def resolve_key():
@@ -84,14 +89,36 @@ def resolve_key():
             except OSError: pass
             sys.stderr.write(f"# saved key to {KEY_FILE}\n")
     if not k:
-        sys.exit(f"No Legba API key found. Set LEGBA_API_KEY, write it to {KEY_FILE} (chmod 600), "
-                 "or run this in a terminal to be prompted once (it gets saved).")
+        sys.exit(
+            "No Legba API key found. Legba is a hosted service: the exits and the browser\n"
+            "are ours, so nothing here works without a key.\n\n"
+            "Ask the user for theirs, once. If they have no account:\n"
+            "  sign up (Free, no card): https://app.legba.xyz/signup\n"
+            "  then copy the key from:  https://app.legba.xyz/api-key\n\n"
+            f"Then set LEGBA_API_KEY, or write it to {KEY_FILE} (chmod 600).\n\n"
+            "If the user does not want an account, stop and say so. Do not retry.")
     return k
 
+# urllib announces itself as Python-urllib, which the edge refuses as a bot: a
+# strange way for Legba's own client to be turned away from Legba. Say who we are.
+UA = "legba-skill/1.0 (+https://legba.xyz)"
+
 def api(path, method="GET"):
-    req = urllib.request.Request(API + path, method=method, headers={"X-API-Key": API_KEY})
-    with urllib.request.urlopen(req, timeout=90) as r:
-        return r.status, json.loads(r.read().decode() or "{}")
+    req = urllib.request.Request(API + path, method=method,
+                                 headers={"X-API-Key": API_KEY, "User-Agent": UA})
+    try:
+        with urllib.request.urlopen(req, timeout=90) as r:
+            return r.status, json.loads(r.read().decode() or "{}")
+    except urllib.error.HTTPError as e:
+        # urllib raises on 4xx/5xx. The caller already knows how to report a
+        # status; a traceback is the one thing this script promises not to leave.
+        raw = e.read().decode(errors="replace")
+        try:
+            return e.code, json.loads(raw or "{}")
+        except ValueError:
+            return e.code, {"error": raw[:200]}
+    except urllib.error.URLError as e:
+        sys.exit(f"cannot reach {API}: {e.reason}")
 
 ap = argparse.ArgumentParser()
 ap.add_argument("url")
@@ -101,7 +128,7 @@ ap.add_argument("--wait", type=int, default=35000)
 ap.add_argument("--out"); ap.add_argument("--screenshot")
 a = ap.parse_args()
 
-proxy = None; provisioned = None
+proxy = None; provisioned = None; cleared = False
 try:
     if a.proxy:
         u = urlparse(a.proxy)
@@ -179,6 +206,7 @@ try:
                 except Exception as e:
                     sys.stderr.write(f"# rotate failed: {e}\n"); break
             if load_and_wait():
+                cleared = True
                 break
         title = page.title() or ""
         html = page.content()
@@ -189,6 +217,21 @@ try:
                 f.write(html)
             sys.stderr.write(f"# wrote {a.out}\n")
         else: sys.stdout.write(html)
+        if not cleared:
+            # The page above is the interstitial, not the target. Say so loudly:
+            # handing it back with a success code is how an agent ends up
+            # parsing "Just a moment..." as the answer.
+            sys.stderr.write(f"""# the anti-bot challenge did not clear in {a.wait} ms.
+# What you have is the challenge page, NOT the page you asked for -- do not parse it.
+# Rung 3 has done all it can here. Go to rung 4, Legba's own browser, where a
+# person can take over and finish the check:
+#
+#   eval "$(node {os.path.dirname(os.path.abspath(__file__))}/legba-session.mjs start --kind browser --country US)"
+#   node {os.path.dirname(os.path.abspath(__file__))}/legba-session.mjs go {a.url}
+#
+# A longer --wait rarely helps: a challenge that has not cleared by now is
+# asking for a human, not for more time.
+""")
     finally:
         try: page.close()
         except Exception: pass
@@ -201,4 +244,4 @@ finally:
 
 sys.stdout.flush()
 sys.stderr.flush()
-os._exit(0)
+os._exit(0 if cleared else CHALLENGE_UNCLEARED_EXIT)
