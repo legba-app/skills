@@ -26,6 +26,7 @@ async function api(path, method = 'GET', body) {
   return j;
 }
 
+const sh = v => `'${String(v).replace(/'/g, "'\\''")}'`;
 const arg = (n, d) => { const i = process.argv.indexOf('--' + n); return i > -1 ? (process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[i + 1] : true) : d; };
 const has = n => process.argv.includes('--' + n);
 const [cmd, a1] = process.argv.slice(2).filter(x => !x.startsWith('--'));
@@ -66,9 +67,9 @@ async function drive(action, payload, { waitForBrowser = false } = {}) {
       const kind = arg('kind', 'browser'), country = arg('country', 'US');
       const browser = String(arg('browser', 'agent'));
       const s = await api('/sessions', 'POST', { kind, country, browser });
-      console.log('SESSION_ID=' + s.id);
-      if (s.proxy_url) console.log('PROXY_URL=' + s.proxy_url);
-      if (s.view_url) console.log('VIEW_URL=' + s.view_url);
+      console.log('SESSION_ID=' + sh(s.id));
+      if (s.proxy_url) console.log('PROXY_URL=' + sh(s.proxy_url));
+      if (s.view_url) console.log('VIEW_URL=' + sh(s.view_url));
       process.stderr.write(`# ${s.browser || s.kind} session ${s.id} (${s.state}) — end it when you are done: legba-session.mjs end\n`);
       if (s.kind === 'browser' && (s.browser || 'agent') === 'agent') {
         process.stderr.write('# the browser takes about a minute to be drivable\n');
@@ -104,7 +105,7 @@ async function drive(action, payload, { waitForBrowser = false } = {}) {
     } else if (cmd === 'handoff') {
       const s = await liveBrowser();
       const r = await api(`/sessions/${s.id}/handoff`, 'POST', { reason: String(arg('reason', '')) });
-      console.log('VIEW_URL=' + r.view_url);
+      console.log('VIEW_URL=' + sh(r.view_url));
       process.stderr.write(`# give that link to the person (${r.reason}). They finish the step in the same browser;\n# then: legba-session.mjs resume\n`);
     } else if (cmd === 'wait-for-human') {
       const until = Date.now() + Number(arg('timeout', 300)) * 1000;

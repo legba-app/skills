@@ -102,8 +102,8 @@ exits at once, and whether the hosted browser is included.
 
 ## One address
 
-Everything this skill calls lives on **https://skill.legba.xyz** — sessions, the browser, the MCP server and
-the proxy pool. Override it with `LEGBA_BASE` if you are pointing at another environment; there is
+Everything this skill calls lives on **https://skill.legba.xyz** — sessions, the exits, the browser and
+the MCP server. Override it with `LEGBA_BASE` if you are pointing at another environment; there is
 nothing else to configure.
 
 The one exception is a browser session's `VIEW_URL`: that is a per-session address on the node that
@@ -247,7 +247,8 @@ nothing without one.
   and a browser.
 - **Reuse** one exit across requests.
 - Ask for the human only when a human is genuinely required, and say plainly why.
-- On a `410`/`502` from the legacy pool's `health`, provision a fresh exit.
+- An exit's `health` answers in status codes: `200` healthy, `410` expired, `502` dead, `404`
+  unknown. On a `410` or a `502`, provision a fresh exit rather than retrying that one.
 
 ## Scope
 
