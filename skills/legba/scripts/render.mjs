@@ -19,7 +19,7 @@ const API = process.env.LEGBA_BASE || process.env.LEGBA_API_BASE || 'https://ski
 const argv = process.argv.slice(2);
 const arg = (n, d) => { const i = argv.indexOf('--' + n); return i > -1 ? (argv[i+1] && !argv[i+1].startsWith('--') ? argv[i+1] : true) : d; };
 const url = argv.filter(x => !x.startsWith('--'))[0];
-if (!url) { console.error('usage: render <url> [--mode wireguard --country US | --proxy URL] [--profile name] [--wait 9000] [--out f] [--screenshot f]'); process.exit(1); }
+if (!url) { console.error('usage: render <url> [--country US | --proxy URL] [--profile name] [--wait 9000] [--out f] [--screenshot f]   (exits are always residential)'); process.exit(1); }
 const wait = parseInt(arg('wait', '9000'), 10);
 const profile = arg('profile');
 
@@ -38,14 +38,14 @@ try{const gp=WebGLRenderingContext.prototype.getParameter;WebGLRenderingContext.
 
 let proxyStr = arg('proxy'), provisioned = null;
 try {
-  if (!proxyStr && arg('mode')) {
+  if (!proxyStr) {
     KEY = await resolveKey();
-    const country = arg('country', 'US'), mode = arg('mode', 'wireguard'), cid = arg('client-id', 'default');
-    const { status, body } = await api(`/proxy?country=${country}&mode=${mode}&client_id=${encodeURIComponent(cid)}`);
+    const country = arg('country', 'US'), cid = arg('client-id', 'default');
+    const { status, body } = await api(`/proxy?country=${country}&client_id=${encodeURIComponent(cid)}`);
     if (status !== 200) throw new Error('provision ' + status + ': ' + JSON.stringify(body));
     provisioned = body; const sp = body.rules.singleProxy, a = body.auth, p = sp.port || (sp.scheme === 'https' ? 443 : 80);
     proxyStr = `${sp.scheme}://${a.username}:${a.password}@${sp.host}:${p}`;
-    console.error(`# proxy ${mode} exit ${body.exit_ip} (${body.exit_city}, ${body.ip_type})`);
+    console.error(`# exit ${body.exit_ip} (${body.exit_city}, ${body.ip_type})`);
   }
   const proxy = proxyStr ? (() => { const u = new URL(proxyStr); return { server: `${u.protocol}//${u.host}`, username: decodeURIComponent(u.username), password: decodeURIComponent(u.password) }; })() : undefined;
   const uaFor = (v) => `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${String(v).split('.')[0]}.0.0.0 Safari/537.36`;

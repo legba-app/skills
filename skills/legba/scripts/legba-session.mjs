@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // legba-session.mjs — Legba session client: a residential connection, or a browser a person can take over.
 import fs from 'node:fs';
-import { resolveKey } from './apikey.mjs';
+import path from 'node:path';
+import { resolveKey, KEY_FILE } from './apikey.mjs';
 
 const API = (process.env.LEGBA_BASE || process.env.LEGBA_SESSION_BASE || 'https://skill.legba.xyz').replace(/\/$/, '');
 const H = { 'Content-Type': 'application/json' };
@@ -32,13 +33,37 @@ const has = n => process.argv.includes('--' + n);
 const [cmd, a1] = process.argv.slice(2).filter(x => !x.startsWith('--'));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+// The session THIS client started, remembered in a small file beside the key.
+// Two people who share one key run on different machines with different files,
+// so each drives the session it opened instead of fighting over whatever
+// /sessions/current happens to point at. Per host, so a dev key and a prod key
+// don't share a pin.
+const apiHost = () => { try { return new URL(API).host; } catch { return 'default'; } };
+const PIN_FILE = process.env.LEGBA_SESSION_FILE
+  || path.join(path.dirname(KEY_FILE), `session-${apiHost()}`);
+const readPin = () => { try { return fs.readFileSync(PIN_FILE, 'utf8').trim() || null; } catch { return null; } };
+const writePin = id => { try { fs.mkdirSync(path.dirname(PIN_FILE), { recursive: true }); fs.writeFileSync(PIN_FILE, String(id)); } catch { /* a pin we cannot write just means we fall back to current */ } };
+const clearPin = () => { try { fs.unlinkSync(PIN_FILE); } catch {} };
+
 async function currentSession() {
   const { session } = await api('/sessions/current');
   return session;
 }
 
+// The pinned session if it is still running, else the server's current one.
+async function targetSession() {
+  const pinned = readPin();
+  if (pinned) {
+    const { sessions } = await api('/sessions');
+    const s = (sessions || []).find(x => x.id === pinned);
+    if (s) return s;
+    clearPin();  // it ended; forget it and fall back to current
+  }
+  return await currentSession();
+}
+
 async function liveBrowser() {
-  const s = await currentSession();
+  const s = await targetSession();
   if (!s) throw new Error('no session is running — start one: legba-session.mjs start --kind browser');
   if (s.kind !== 'browser') throw new Error(`the running session is a ${s.kind} session, not a browser`);
   return s;
@@ -65,23 +90,26 @@ async function drive(action, payload, { waitForBrowser = false } = {}) {
 
     if (cmd === 'start') {
       const kind = arg('kind', 'browser'), country = arg('country', 'US');
-      const browser = String(arg('browser', 'agent'));
-      const s = await api('/sessions', 'POST', { kind, country, browser });
+      const s = await api('/sessions', 'POST', { kind, country, browser: 'agent' });
+      writePin(s.id);  // bind this client to the session it just opened
       console.log('SESSION_ID=' + sh(s.id));
       if (s.proxy_url) console.log('PROXY_URL=' + sh(s.proxy_url));
       if (s.view_url) console.log('VIEW_URL=' + sh(s.view_url));
       process.stderr.write(`# ${s.browser || s.kind} session ${s.id} (${s.state}) — end it when you are done: legba-session.mjs end\n`);
-      if (s.kind === 'browser' && (s.browser || 'agent') === 'agent') {
+      if (s.kind === 'browser') {
         process.stderr.write('# the browser takes about a minute to be drivable\n');
-      } else if (s.kind === 'browser') {
-        process.stderr.write('# give VIEW_URL to the person — this browser is theirs to use, not yours to drive\n');
       }
     } else if (cmd === 'current') {
-      console.log(JSON.stringify(await currentSession(), null, 2));
+      console.log(JSON.stringify(await targetSession(), null, 2));
     } else if (cmd === 'end') {
-      const id = a1 || (await currentSession() || {}).id;
+      // End the session this client opened, not whatever is "current" — with a
+      // shared key, current could be the other person's.
+      const pinned = readPin();
+      const id = a1 || pinned || (await currentSession() || {}).id;
       if (!id) { console.log('nothing is running'); return; }
-      console.log(JSON.stringify(await api(`/sessions/${id}`, 'DELETE')));
+      const r = await api(`/sessions/${id}`, 'DELETE');
+      if (id === pinned) clearPin();
+      console.log(JSON.stringify(r));
     } else if (cmd === 'go' || cmd === 'navigate') {
       if (!a1) throw new Error('usage: go <url>');
       console.log(JSON.stringify(await drive('navigate', { url: a1 }, { waitForBrowser: true })));
@@ -110,7 +138,7 @@ async function drive(action, payload, { waitForBrowser = false } = {}) {
     } else if (cmd === 'wait-for-human') {
       const until = Date.now() + Number(arg('timeout', 300)) * 1000;
       for (;;) {
-        const s = await currentSession();
+        const s = await targetSession();
         if (!s) { console.log(JSON.stringify({ state: 'ended' })); return; }
         if (s.state !== 'needs_human') { console.log(JSON.stringify({ state: s.state, timed_out: false })); return; }
         if (Date.now() > until) { console.log(JSON.stringify({ state: s.state, timed_out: true })); return; }
@@ -121,8 +149,7 @@ async function drive(action, payload, { waitForBrowser = false } = {}) {
       console.log(JSON.stringify(await api(`/sessions/${s.id}/resume`, 'POST')));
     } else {
       console.log(`commands:
-  start [--kind browser|proxy] [--country US] [--browser agent|chrome|brave|firefox|tor]
-                                                open your one session
+  start [--kind browser|proxy] [--country US]   open your one session
   current                                       what is running
   end [<id>]                                    close it and free the capacity
   go <url> | read [--out f] | shot [--out f] [--full] | wait [--ms N]

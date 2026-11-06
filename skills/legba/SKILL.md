@@ -26,10 +26,7 @@ Four rungs, lightest first. Climb only as far as the target forces you:
 | 1 | plain fetch | `curl` through a residential exit | the default |
 | 2 | `render.mjs` | headless Chromium through that exit | the page needs JavaScript |
 | 3 | `antibot.py` | Camoufox (fingerprint-patched Firefox) **on this machine** | hard anti-bot: Cloudflare interstitial, DataDome, PerimeterX |
-| 4 | **hosted browser** | a stealth browser on Legba's infrastructure, behind a residential exit, **that the user can take over** | rung 3 fails, this machine cannot run a browser, or the step needs a human: captcha, login code, 2FA |
-
-The same key also opens a plain Shield browser (Chrome, Brave, Firefox, Tor) for the user to drive
-themselves — see the end of rung 4.
+| 4 | **hosted browser** | Camoufox on Legba's infrastructure, behind a residential exit, **that the user can take over** | rung 3 fails, this machine cannot run a browser, or the step needs a human: captcha, login code, 2FA |
 
 **What the key's plan allows.** Rungs 1 and 2 work on every plan, including Free: one residential exit
 at a time. Rung 3 runs on this machine and costs the plan nothing. Rung 4 is a browser on Legba's
@@ -106,8 +103,8 @@ Everything this skill calls lives on **https://skill.legba.xyz** — sessions, t
 the MCP server. Override it with `LEGBA_BASE` if you are pointing at another environment; there is
 nothing else to configure.
 
-The one exception is a browser session's `VIEW_URL`: that is a per-session address on the node that
-streams it, which is why it looks different. It is the link you hand to a person.
+The one exception is a browser session's `VIEW_URL`: each session gets its own address, which is why
+it looks different. It is the link you hand to a person.
 
 ## One session at a time
 
@@ -132,22 +129,22 @@ node "$SKILL/scripts/legba-session.mjs" end
 Provisioning a residential exit takes a few seconds — allow a **60–90 s** timeout. Reuse the one exit
 across requests; do not provision per URL.
 
-The same client does more than hand you one exit — several at once up to your plan's limit, a cheap
-datacenter exit with `--mode proxy`, and `locations`, `rotate`, `sticky`:
+Every exit is residential. The same client does more than hand you a single one — several at once up
+to your plan's limit, and `locations`, `rotate`, `sticky`:
 
 ```
-node "$SKILL/scripts/legba-proxy.mjs" get --country US --mode wireguard --client-id myclient
+node "$SKILL/scripts/legba-proxy.mjs" get --country US --client-id myclient
 node "$SKILL/scripts/legba-proxy.mjs" cleanup --client-id myclient
 ```
 
 ## Rung 2 — JavaScript (`render.mjs`)
 
 Chromium, through the exit, with the usual headless tells patched out. Handles ordinary JS-rendered
-pages. Measured 2026-10-07: it does **not** clear Cloudflare's interstitial — for those go to rung 3.
+pages. It does **not** clear Cloudflare's interstitial — for those go to rung 3.
 
 ```
 node "$SKILL/scripts/render.mjs" https://target/path --proxy "$PROXY_URL" --out page.html
-# or let it provision its own exit: --mode wireguard --country US
+# or let it take its own exit: --country US
 # options: --wait 9000 · --screenshot shot.png · --profile <name> (warm profile, keeps cf_clearance)
 ```
 
@@ -157,7 +154,7 @@ Camoufox: a real Firefox with a patched fingerprint, geoip-aligned to the exit.
 
 ```
 python3 "$SKILL/scripts/antibot.py" https://target/path --proxy "$PROXY_URL" --out page.html
-# or: --mode wireguard --country US   · --profile <name> keeps the warm session
+# or let it take its own exit: --country US   · --profile <name> keeps the warm session
 # --wait is a ceiling (default 35 s), not a sleep: it stops as soon as the challenge clears
 ```
 
@@ -211,22 +208,6 @@ node "$SKILL/scripts/legba-session.mjs" resume
 
 Then carry on from the page they left you on. Nothing is transferred and nothing is lost: it is one
 browser the whole time.
-
-### A browser for the person, not for you
-
-Sometimes what they want is a browser of their own — a clean, fingerprint-patched one behind a
-residential exit, with nothing of yours in it. Same key, same one-session rule:
-
-```
-eval "$(node "$SKILL/scripts"/legba-session.mjs start --kind browser --browser chrome --country US)"
-```
-
-`--browser chrome|brave|firefox|tor` opens a Shield browser and returns its `VIEW_URL` for them to
-open. You **cannot** drive that one: `go`, `read`, `click` and the handoff all answer that it is
-theirs to use. Starting a session with `--browser agent` (the default) is the one you drive.
-
-A Shield browser leaves through Legba's own address, not a residential exit — the exit is for
-the proxy session and for the agent's browser. Say so if the user's reason for wanting it is the IP.
 
 ### MCP instead of the CLI
 

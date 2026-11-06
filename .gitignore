@@ -1,0 +1,24 @@
+# Rung 2 installs Playwright next to the scripts; that is a local install, not part of the skill.
+**/scripts/node_modules/
+**/scripts/package.json
+**/scripts/package-lock.json
+node_modules/
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Never commit a key next to the thing that reads it.
+api-key
+*.key
+.env
+.env.*
+
+page.html
+shot.png
+*.log
+.DS_Store
+
+# Local build artifact, not part of the published repo.
+skills-repo.zip

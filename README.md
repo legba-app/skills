@@ -14,18 +14,24 @@ Use it two ways: as an agent skill (Claude Code, OpenClaw, Hermes, Meta Muse, an
 
 Sign up at [app.legba.xyz](https://app.legba.xyz) and copy your key. The Free plan covers rungs 1 to 3.
 
+```
 export LEGBA_API_KEY='lk_...'
-Using only the skill? You can skip this. The first time a script runs without a key, it asks once and saves it to ~/.config/legba-proxy/api-key (permissions 600). Using MCP? Export the key first, because the MCP setup command reads it.
+```
+Using only the skill? You can skip this. The first time a script runs without a key, it asks once and saves it to ~/.config/legba/api-key (permissions 600). Using MCP? Export the key first, because the MCP setup command reads it.
 
 ### 2. Install the skill
 
+```
 npx skills add legba-app/skills -g
+```
 Pick your agent when prompted, or name it: -a claude-code, -a openclaw, -a hermes-agent. Requires Node.js 22.20 or later.
 
 Manual install (Claude Code)
 
-git clone https://github.com/legba-app/skills ~/.claude/skills/legba
-For any other agent, clone the repo into that agent's skills directory. SKILL.md sits at the root, so the folder works as-is.
+```
+git clone https://github.com/legba-app/skills /tmp/legba && cp -R /tmp/legba/skills/legba ~/.claude/skills/legba
+```
+The skill itself is the skills/legba folder, so copy that one folder, not the whole repository. For any other agent, copy it into that agent's skills directory instead.
 
 ### 3. Try it
 
@@ -54,22 +60,22 @@ When automation reaches a step that needs you, like a captcha, a login, or a one
 
 The agent never types your credentials. Anything that authenticates a person goes to the person.
 
-### A browser for you
-
-On Pro, the same key opens a clean browser for you to use directly: Chrome, Brave, Firefox, or Tor. Your agent can't drive it. Note that it exits through a Legba address, not a residential one.
-
 ---
 
 ## Connect over MCP
 
-MCP provides the hosted browser and handoff tools (rung 4), which require Pro. The Free plan does not include hosted sessions.
+MCP provides the hosted browser and handoff tools (rung 4), which require a paid plan. The Free plan does not include hosted sessions.
 
+```
 URL:     https://skill.legba.xyz/mcp
 Header:  Authorization: Bearer <LEGBA_API_KEY>
+```
 Claude Code (with LEGBA_API_KEY exported; the key is saved to your local Claude config):
 
+```
 claude mcp add --scope user --transport http legba https://skill.legba.xyz/mcp \
   --header "Authorization: Bearer $LEGBA_API_KEY"
+```
 Tools: start_session, current_session, end_session, navigate, read_page, click, type, screenshot, wait, request_human, wait_for_human, resume.
 
 Skill vs. MCP. MCP gives you the hosted browser and human handoff (rung 4). The local rungs (Chromium and Camoufox) come with the skill and need an agent that can run local commands. For the full ladder, install the skill.
@@ -96,6 +102,7 @@ Running parallel sessions, production volume, or a dedicated deployment? Email [
 
 Rung 1 needs only Node.js and curl. Rung 4 runs on Legba's side and installs nothing locally. Rungs 2 and 3 need a one-time setup:
 
+```
 SKILL=~/.claude/skills/legba   # or wherever your agent installed it
 
 # Rung 2: Playwright and Chromium
@@ -104,6 +111,7 @@ cd "$SKILL/scripts" && npm i playwright && npx playwright install chromium
 # Rung 3: Camoufox (about 2.5 GB the first time)
 python3 -m pip install --user 'camoufox[geoip]'
 python3 -m camoufox fetch
+```
 If your machine can't run a local browser, skip both and use rung 4.
 
 ---
@@ -117,9 +125,9 @@ If your machine can't run a local browser, skip both and use rung 4.
 
 ## Troubleshooting
 
-- No key found: set LEGBA_API_KEY or check ~/.config/legba-proxy/api-key. MCP clients need the key in their own header config.
+- No key found: set LEGBA_API_KEY or check ~/.config/legba/api-key. MCP clients need the key in their own header config.
 - Upgrade needed (402): the step needs rung 4, which isn't on Free. Upgrade or stop there.
-- Rung 2 or 3 won't start: first check that you completed the local setup above. If your environment cannot install or launch the browser, use rung 4 (Pro) instead of repeating an installation that cannot succeed.
+- Rung 2 or 3 won't start: first check that you completed the local setup above. If your environment cannot install or launch the browser, use rung 4 (a paid plan) instead of repeating an installation that cannot succeed.
 
 ## Security and responsible use
 

@@ -1,0 +1,12 @@
+{
+  "name": "legba",
+  "description": "Legba — web access for agents, including a browser a human can take over.",
+  "owner": { "name": "Legba", "url": "https://legba.app" },
+  "plugins": [
+    {
+      "name": "legba",
+      "source": "./",
+      "description": "Get an agent onto sites that block it: a residential exit, then a real browser, then a browser a person can take over mid-task and hand back."
+    }
+  ]
+}

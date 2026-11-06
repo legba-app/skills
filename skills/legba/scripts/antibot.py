@@ -2,8 +2,8 @@
 # antibot.py — anti-detect browser node (Camoufox) through a Legba residential proxy.
 # Auth for auto-proxy: set LEGBA_API_KEY in the environment before use (see SKILL.md)
 # Usage:
-#   python3 antibot.py <url> --mode wireguard --country US            # auto residential, fresh session
-#   python3 antibot.py <url> --mode wireguard --profile acme          # WARM persistent profile (keeps cf_clearance)
+#   python3 antibot.py <url> --country US                             # residential exit, fresh session
+#   python3 antibot.py <url> --profile acme                           # WARM persistent profile (keeps cf_clearance)
 #   python3 antibot.py <url> --proxy http://u:p@host:port             # reuse a proxy you hold
 #   [--wait 35000] [--out page.html] [--screenshot shot.png]
 import sys, os, json, time, argparse, urllib.request, urllib.error, glob
@@ -48,7 +48,7 @@ def no_local_browser(reason):
 #   node {here}/legba-session.mjs read --out page.html
 #
 # If that answers 402, the key is on the Free plan: Free gets the residential
-# proxy (rungs 1 and 2, one session at a time) but not the hosted browser. Give
+# exit (rungs 1 and 2, one session at a time) but not the hosted browser. Give
 # the user the 402's own message -- it names the limit and the upgrade link --
 # and stop. Do not keep trying rungs 1 to 3 on a page that defeated them.
 """)
@@ -62,8 +62,13 @@ except Exception as e:  # noqa: BLE001 — a broken install raises more than Imp
 
 ROTATE_ATTEMPTS = int(os.environ.get("LEGBA_ANTIBOT_ROTATE_ATTEMPTS", "2"))
 GOTO_ATTEMPTS = 4
+# What the interstitial SAYS, read from the title and the visible text rather
+# than the markup. The markup is the wrong place to look: Cloudflare leaves its
+# challenge-platform script on the page it just let you through, so a fully
+# loaded page matches it and a real answer gets reported as a failed challenge.
 CHALLENGE_MARKERS = ("just a moment", "attention required", "checking your browser",
-                     "challenge-platform", "cf-chl", "_cf_chl")
+                     "verifying you are human", "verify you are human",
+                     "review the security of your connection", "enable javascript and cookies")
 API = os.environ.get("LEGBA_BASE") or os.environ.get("LEGBA_API_BASE") or "https://skill.legba.xyz"
 
 KEY_FILE = (os.environ.get("LEGBA_API_KEY_FILE") or os.environ.get("LEGBA_PROXY_API_KEY_FILE")
@@ -99,8 +104,7 @@ def resolve_key():
             "If the user does not want an account, stop and say so. Do not retry.")
     return k
 
-# urllib announces itself as Python-urllib, which the edge refuses as a bot: a
-# strange way for Legba's own client to be turned away from Legba. Say who we are.
+# Identify the client by name, as any well-behaved HTTP client does.
 UA = "legba-skill/1.0 (+https://legba.xyz)"
 
 def api(path, method="GET"):
@@ -110,8 +114,8 @@ def api(path, method="GET"):
         with urllib.request.urlopen(req, timeout=90) as r:
             return r.status, json.loads(r.read().decode() or "{}")
     except urllib.error.HTTPError as e:
-        # urllib raises on 4xx/5xx. The caller already knows how to report a
-        # status; a traceback is the one thing this script promises not to leave.
+        # urllib raises on 4xx/5xx; return the status so the caller can report
+        # it, rather than ending the run with a traceback.
         raw = e.read().decode(errors="replace")
         try:
             return e.code, json.loads(raw or "{}")
@@ -122,7 +126,7 @@ def api(path, method="GET"):
 
 ap = argparse.ArgumentParser()
 ap.add_argument("url")
-ap.add_argument("--proxy"); ap.add_argument("--mode"); ap.add_argument("--country", default="US")
+ap.add_argument("--proxy"); ap.add_argument("--country", default="US")
 ap.add_argument("--client-id", default="default"); ap.add_argument("--profile")
 ap.add_argument("--wait", type=int, default=35000)
 ap.add_argument("--out"); ap.add_argument("--screenshot")
@@ -133,14 +137,14 @@ try:
     if a.proxy:
         u = urlparse(a.proxy)
         proxy = {"server": f"{u.scheme}://{u.hostname}:{u.port}", "username": u.username, "password": u.password}
-    elif a.mode:
+    else:
         API_KEY = resolve_key()
-        st, body = api(f"/proxy?country={a.country}&mode={a.mode}&client_id={a.client_id}")
+        st, body = api(f"/proxy?country={a.country}&client_id={a.client_id}")
         if st != 200: sys.exit(f"provision {st}: {body}")
         provisioned = body; sp = body["rules"]["singleProxy"]; auth = body["auth"]
         port = sp.get("port") or (443 if sp["scheme"] == "https" else 80)
         proxy = {"server": f'{sp["scheme"]}://{sp["host"]}:{port}', "username": auth["username"], "password": auth["password"]}
-        sys.stderr.write(f'# proxy {a.mode} exit {body.get("exit_ip")} ({body.get("exit_city")}, {body.get("ip_type")})\n')
+        sys.stderr.write(f'# exit {body.get("exit_ip")} ({body.get("exit_city")}, {body.get("ip_type")})\n')
 
     def make(geoip):
         opts = dict(headless=True, humanize=True, proxy=proxy, geoip=geoip)
@@ -182,19 +186,31 @@ try:
             deadline = time.time() + a.wait / 1000
             while time.time() < deadline:
                 page.wait_for_timeout(1000)
-                body = (page.content() or "").lower()
-                if body and not any(m in body for m in CHALLENGE_MARKERS):
+                try:
+                    seen = ((page.title() or "") + " " + (page.inner_text("body") or "")).lower()
+                except Exception:  # noqa: BLE001 — mid-navigation; look again next tick
+                    continue
+                if seen.strip() and not any(m in seen for m in CHALLENGE_MARKERS):
                     try:
                         page.wait_for_load_state("networkidle", timeout=15000)
                     except Exception:
                         pass
-                    last = -1
-                    for _ in range(8):
+                    # Settle. A single unchanged tick is not enough: an app that
+                    # renders its shell first, then fetches what you actually came
+                    # for, pauses in between, and a page handed back during that
+                    # pause is a page with no content on it. Wait for the size to
+                    # hold still twice running before believing it.
+                    last, stable = -1, 0
+                    for _ in range(25):
                         size = len(page.content() or "")
                         if size == last:
-                            break
+                            stable += 1
+                            if stable >= 3:
+                                break
+                        else:
+                            stable = 0
                         last = size
-                        page.wait_for_timeout(750)
+                        page.wait_for_timeout(1500)
                     return True
             return False
 

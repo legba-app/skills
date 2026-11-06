@@ -15,18 +15,25 @@ die() { printf 'legba: %s\n' "$*" >&2; exit 1; }
 
 command -v git >/dev/null 2>&1 || die "git is required"
 
+# The repository is a plugin: the skill itself lives at skills/legba, and that
+# is what an agent's skills directory wants -- not the whole repo, which would
+# bury SKILL.md two folders deep where nothing looks for it.
+WORK=""
+fetch_once() {
+    [ -n "$WORK" ] && return 0
+    WORK="$(mktemp -d)" || die "could not create a temporary directory"
+    trap 'rm -rf "$WORK"' EXIT INT TERM
+    git clone --quiet --depth 1 "$REPO" "$WORK/repo" || die "could not download the skill"
+    [ -f "$WORK/repo/skills/$NAME/SKILL.md" ] || die "downloaded copy has no skills/$NAME/SKILL.md"
+}
+
 install_to() {
     target="$1"
-    if [ -d "$target/.git" ]; then
-        say "updating $target"
-        git -C "$target" pull --quiet --ff-only || die "could not update $target"
-    elif [ -e "$target" ]; then
-        die "$target already exists and is not a git clone — move it aside first"
-    else
-        say "installing to $target"
-        mkdir -p "$(dirname "$target")"
-        git clone --quiet --depth 1 "$REPO" "$target" || die "could not clone into $target"
-    fi
+    fetch_once
+    say "installing to $target"
+    mkdir -p "$target"
+    rm -rf "$target/scripts" "$target/SKILL.md"
+    cp -R "$WORK/repo/skills/$NAME/." "$target/" || die "could not write to $target"
 }
 
 if [ "$#" -gt 0 ]; then

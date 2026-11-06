@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const PAYLOAD = ['SKILL.md', 'scripts'];
+const SOURCE = path.join(HERE, 'skills', 'legba');
 const AGENTS = [
   { name: 'Claude Code / Desktop', base: '.claude' },
   { name: 'OpenClaw', base: '.openclaw' },
@@ -16,7 +17,7 @@ const AGENTS = [
 function copyInto(target) {
   fs.mkdirSync(target, { recursive: true });
   for (const item of PAYLOAD) {
-    fs.cpSync(path.join(HERE, item), path.join(target, item), { recursive: true });
+    fs.cpSync(path.join(SOURCE, item), path.join(target, item), { recursive: true });
   }
 }
 

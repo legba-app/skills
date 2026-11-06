@@ -1,4 +1,4 @@
-// apikey.mjs — shared Legba API key resolver for the node helpers.
+// apikey.mjs — shared Legba API key resolver for the Node scripts.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
