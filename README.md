@@ -90,7 +90,7 @@ Skill vs. MCP. MCP gives you the hosted browser and human handoff (rung 4). The 
 | Headless Chromium (rung 2) | Included, local setup | Included |
 | Hardened Firefox (rung 3) | Included, local setup | Included |
 | Hosted browser and human handoff (rung 4) | Not included | Included |
-| Price | $0 | $500/month flat, no bandwidth meter |
+| Price | $0 | $250/month flat, no bandwidth meter |
 
 If a task needs rung 4 on Free, the agent tells you and links the upgrade instead of retrying.
 
