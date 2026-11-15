@@ -28,20 +28,19 @@ Four rungs, lightest first. Climb only as far as the target forces you:
 | 3 | `antibot.py` | Camoufox (fingerprint-patched Firefox) **on this machine** | hard anti-bot: Cloudflare interstitial, DataDome, PerimeterX |
 | 4 | **hosted browser** | Camoufox on Legba's infrastructure, behind a residential exit, **that the user can take over** | rung 3 fails, this machine cannot run a browser, or the step needs a human: captcha, login code, 2FA |
 
-**What the key's plan allows.** Rungs 1 and 2 work on every plan, including Free: one residential exit
-at a time. Rung 3 runs on this machine and costs the plan nothing. Rung 4 is a browser on Legba's
-infrastructure and is **not part of Free** — a Free key is refused with `402` and the two scripts exit
-with a code you can branch on:
+**What the key's plan allows.** Every rung works on every plan, including Free — the hosted browser
+too. The plan decides how many sessions you can hold at once (Free: one). Rung 3 runs on this machine
+and costs the plan nothing. If the account cannot use a rung right now (for example a subscription
+that has lapsed), the answer is a `402` and the scripts exit with a code you can branch on:
 
 | exit | from | means |
 |-|-|-|
 | `3` | `render.mjs`, `antibot.py` | this machine cannot run that rung's browser — climb |
-| `4` | `legba-session.mjs` | the plan does not include the hosted browser — the user must upgrade |
+| `4` | `legba-session.mjs` | the account's plan does not cover this right now — the user must sort out their plan |
 | `5` | `antibot.py` | the anti-bot challenge never cleared — what came back is the interstitial, not the page. Climb to rung 4; do not parse it, and do not just raise `--wait` |
 
-Those two meet in the common case: a locked-down box where Camoufox will not install **and** a Free
-key. Then the honest answer is not another attempt, it is one sentence to the user — the page needs a
-real browser, their plan does not include one, here is the link — and stop.
+On a locked-down box where Camoufox will not install, rung 4 is the way forward on any plan: the
+browser is Legba's, so there is nothing to install here.
 
 Rung 4 is the one nothing else does: when you are stuck, you hand the **same** browser — same page,
 same cookies — to the person, they finish the step, and they hand it back to you.
@@ -91,11 +90,11 @@ export LEGBA_API_KEY='PASTE_KEY_HERE'
 ```
 
 Keys come from the Legba dashboard: **https://app.legba.xyz/api-key** — sign up first at
-**https://app.legba.xyz/signup** if you have no account. The Free plan needs no card and is enough for
-rungs 1 and 2: one residential exit at a time.
+**https://app.legba.xyz/signup** if you have no account. The Free plan needs no card and covers every
+rung, the hosted browser included, one session at a time.
 
 One key, every rung. A Legba key starts `lk_` and the plan behind it decides what it may do: how many
-exits at once, and whether the hosted browser is included.
+sessions at once.
 
 ## One address
 
@@ -109,7 +108,7 @@ it looks different. It is the link you hand to a person.
 ## One session at a time
 
 Legba gives you **one live session per account**, whatever opened it — this skill, the dashboard, or the
-browser extension. On Free that one session is a proxy exit; the hosted browser needs a paid plan. Starting a second is refused with a message naming what is already running. So:
+browser extension. On Free that one session can be a residential exit or the hosted browser. Starting a second is refused with a message naming what is already running. So:
 **end your session when the task is done.** It costs capacity while it is open, and it is the user's only
 slot.
 
@@ -184,8 +183,8 @@ node "$SKILL/scripts/legba-session.mjs" end
 Starting the browser takes **about a minute**; `go`, `read` and `shot` wait that out for you. Other
 commands return "the browser is not ready yet" — wait a few seconds and repeat.
 
-**`UPGRADE NEEDED` and exit `4`** means the key is on Free, which gets the exit but not this browser.
-Give the user that line — it carries the upgrade link — and stop there. Do not fall back down the
+**`UPGRADE NEEDED` and exit `4`** means the account's plan does not cover this right now (for example
+a subscription that has lapsed). Give the user that line — it carries the link — and stop there. Do not fall back down the
 ladder onto a page that already defeated rung 3, and do not try to install a browser locally instead:
 if rung 3 were available you would not be here.
 

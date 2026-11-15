@@ -36,7 +36,7 @@ def no_local_browser(reason):
     read-only home, or simply not enough disk for Camoufox's 2.5 GB of Firefox.
     Retrying the install burns minutes and ends in the same place, so the script
     names rung 4 -- which installs nothing because the browser is ours, not this
-    machine's -- and what to tell the user if their plan does not include it."""
+    machine's -- and what to tell the user if their plan does not cover it right now."""
     here = os.path.dirname(os.path.abspath(__file__))
     sys.stderr.write(f"""# rung 3 unavailable: {reason}
 #
@@ -47,10 +47,10 @@ def no_local_browser(reason):
 #   node {here}/legba-session.mjs go <url>
 #   node {here}/legba-session.mjs read --out page.html
 #
-# If that answers 402, the key is on the Free plan: Free gets the residential
-# exit (rungs 1 and 2, one session at a time) but not the hosted browser. Give
-# the user the 402's own message -- it names the limit and the upgrade link --
-# and stop. Do not keep trying rungs 1 to 3 on a page that defeated them.
+# Every plan includes it, Free too. If it answers 402, the account's plan does
+# not cover it right now (for example a lapsed subscription): give the user the
+# 402's own message -- it names the limit and the link -- and stop. Do not keep
+# trying rungs 1 to 3 on a page that defeated them.
 """)
     sys.exit(NO_LOCAL_BROWSER_EXIT)
 

@@ -1,7 +1,7 @@
 {
   "name": "legba",
   "displayName": "Legba",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Get an agent onto sites that block it: a residential exit, then a real browser, then a browser a person can take over mid-task and hand back.",
   "author": {
     "name": "Legba",

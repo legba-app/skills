@@ -18,8 +18,8 @@ async function api(path, method = 'GET', body) {
   const msg = j && j.detail ? j.detail : JSON.stringify(j);
   if (r.status === 402) {
     console.error(`UPGRADE NEEDED: ${msg}`);
-    console.error('Free gets the residential exit (rungs 1 and 2), one session at a time; the hosted');
-    console.error('browser is a paid feature. Tell the user the line above, with the link, and stop.');
+    console.error("The account's plan does not cover this right now. Tell the user the line above,");
+    console.error('with the link, and stop.');
     console.error('Do not retry, and do not try to install a browser on this machine instead.');
     process.exit(UPGRADE_NEEDED_EXIT);
   }

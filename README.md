@@ -12,7 +12,7 @@ Use it two ways: as an agent skill (Claude Code, OpenClaw, Hermes, Meta Muse, an
 
 ### 1. Get a key
 
-Sign up at [app.legba.xyz](https://app.legba.xyz) and copy your key. The Free plan covers rungs 1 to 3.
+Sign up at [app.legba.xyz](https://app.legba.xyz) and copy your key. The Free plan covers every rung, one session at a time.
 
 ```
 export LEGBA_API_KEY='lk_...'
@@ -64,7 +64,7 @@ The agent never types your credentials. Anything that authenticates a person goe
 
 ## Connect over MCP
 
-MCP provides the hosted browser and handoff tools (rung 4), which require a paid plan. The Free plan does not include hosted sessions.
+MCP provides the hosted browser and handoff tools (rung 4). Every plan includes them, Free too, one session at a time.
 
 ```
 URL:     https://skill.legba.xyz/mcp
@@ -125,8 +125,8 @@ If your machine can't run a local browser, skip both and use rung 4.
 ## Troubleshooting
 
 - No key found: set LEGBA_API_KEY or check ~/.config/legba/api-key. MCP clients need the key in their own header config.
-- Upgrade needed (402): the step needs rung 4, which isn't on Free. Upgrade or stop there.
-- Rung 2 or 3 won't start: first check that you completed the local setup above. If your environment cannot install or launch the browser, use rung 4 (a paid plan) instead of repeating an installation that cannot succeed.
+- Upgrade needed (402): the account's plan does not cover this right now (for example a lapsed subscription). Sort out the plan or stop there.
+- Rung 2 or 3 won't start: first check that you completed the local setup above. If your environment cannot install or launch the browser, use rung 4 instead of repeating an installation that cannot succeed.
 
 ## Security and responsible use
 
