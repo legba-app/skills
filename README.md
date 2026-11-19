@@ -84,16 +84,13 @@ Skill vs. MCP. MCP gives you the hosted browser and human handoff (rung 4). The 
 
 ## Plans
 
-| | Free | Pro |
-|---|---|---|
-| Residential exit (rung 1) | Included | Included |
-| Headless Chromium (rung 2) | Included, local setup | Included |
-| Hardened Firefox (rung 3) | Included, local setup | Included |
-| Hosted browser and human handoff (rung 4) | Included | Included |
-| Connections at once | 1 | 25 |
-| Price | $0 | $250/month flat, no bandwidth meter |
+Every plan includes every rung. The plan decides how many connections you can hold at once.
 
-Running parallel sessions, production volume, or a dedicated deployment? Email [phillip@legba.app](mailto:phillip@legba.app).
+| | Free | Pro | Scale | Enterprise |
+|---|---|---|---|---|
+| Connections at once | 1 | 25 | 100 | Custom |
+
+Free needs no card. See the full plans and sign up at [app.legba.xyz](https://app.legba.xyz).
 
 ---
 
