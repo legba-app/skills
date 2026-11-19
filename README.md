@@ -92,6 +92,8 @@ Every plan includes every rung. The plan decides how many connections you can ho
 
 Free needs no card. See the full plans and sign up at [app.legba.xyz](https://app.legba.xyz).
 
+Running parallel sessions, production volume, or a dedicated deployment? Email [phillip@legba.app](mailto:phillip@legba.app).
+
 ---
 
 ## Local setup (rungs 2 and 3)
