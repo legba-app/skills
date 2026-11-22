@@ -70,15 +70,45 @@ MCP provides the hosted browser and handoff tools (rung 4). Every plan includes 
 URL:     https://skill.legba.xyz/mcp
 Header:  Authorization: Bearer <LEGBA_API_KEY>
 ```
-Claude Code (with LEGBA_API_KEY exported; the key is saved to your local Claude config):
+
+### Claude Code / Claude Desktop
+
+With `LEGBA_API_KEY` exported (the key is saved to your local Claude config):
 
 ```
 claude mcp add --scope user --transport http legba https://skill.legba.xyz/mcp \
   --header "Authorization: Bearer $LEGBA_API_KEY"
 ```
-Tools: start_session, current_session, end_session, navigate, read_page, click, type, screenshot, wait, request_human, wait_for_human, resume.
 
-Skill vs. MCP. MCP gives you the hosted browser and human handoff (rung 4). The local rungs (Chromium and Camoufox) come with the skill and need an agent that can run local commands. For the full ladder, install the skill.
+### claude.ai (web chat)
+
+Go to **Settings → Connectors → Add custom connector** and fill in:
+
+| Field | Value |
+|---|---|
+| Name | Legba |
+| URL | `https://app.legba.xyz/mcp` |
+| Authentication | **No sign-in** (our server uses an API key, not OAuth) |
+
+Then add a custom header:
+
+| Header | Value |
+|---|---|
+| `Authorization` | `Bearer lk_YOUR_KEY_HERE` |
+
+Replace `lk_YOUR_KEY_HERE` with your key from [app.legba.xyz/api-key](https://app.legba.xyz/api-key).
+
+> **Note:** claude.ai sandboxes outbound requests. On **Team and Enterprise** plans, your admin may need to allow `skill.legba.xyz` and `app.legba.xyz` under **Settings → Capabilities**. On Free and Pro claude.ai plans this may not be available, and the tools will fail with a network error. Use **Claude Code** (above) for the full experience.
+
+### Other MCP clients
+
+Any MCP client that supports HTTP transport can connect to `https://skill.legba.xyz/mcp` with the `Authorization: Bearer <key>` header.
+
+### Available tools
+
+start_session, current_session, end_session, navigate, read_page, click, type, screenshot, wait, request_human, wait_for_human, resume.
+
+Skill vs. MCP: MCP gives you the hosted browser and human handoff (rung 4). The local rungs (Chromium and Camoufox) come with the skill and need an agent that can run local commands. For the full ladder, install the skill.
 
 ---
 
