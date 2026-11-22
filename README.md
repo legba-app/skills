@@ -82,21 +82,25 @@ claude mcp add --scope user --transport http legba https://skill.legba.xyz/mcp \
 
 ### claude.ai (web chat)
 
-Go to **Settings → Connectors → Add custom connector** and fill in:
+**1.** Open **Plugins** in the left sidebar, click **Add ▾**, then **Add custom connector**.
 
-| Field | Value |
-|---|---|
-| Name | Legba |
-| URL | `https://app.legba.xyz/mcp` |
-| Authentication | **No sign-in** (our server uses an API key, not OAuth) |
+![Add custom connector menu](docs/images/claudeai-1-add-menu.png)
 
-Then add a custom header:
+**2.** Name it **Legba Skills** and set the URL to `https://app.legba.xyz/mcp`. Click **Continue**.
 
-| Header | Value |
-|---|---|
-| `Authorization` | `Bearer lk_YOUR_KEY_HERE` |
+![Name and URL](docs/images/claudeai-2-name-url.png)
 
-Replace `lk_YOUR_KEY_HERE` with your key from [app.legba.xyz/api-key](https://app.legba.xyz/api-key).
+**3.** Under Authentication, pick **No sign-in** (Legba uses an API key, not OAuth). Ignore the "Sign in now — Detected" label.
+
+![Select No sign-in](docs/images/claudeai-3-no-sign-in.png)
+
+**4.** Under Request headers, add a header with name `authorization` and value `Bearer lk_YOUR_KEY_HERE` (replace with your key from [app.legba.xyz/api-key](https://app.legba.xyz/api-key)). Check **Required**.
+
+![Add the authorization header](docs/images/claudeai-4-auth-header.png)
+
+**5.** Save. The connector shows **Connected** with 19 tools.
+
+![Connected](docs/images/claudeai-5-connected.png)
 
 > **Note:** claude.ai sandboxes outbound requests. On **Team and Enterprise** plans, your admin may need to allow `skill.legba.xyz` and `app.legba.xyz` under **Settings → Capabilities**. On Free and Pro claude.ai plans this may not be available, and the tools will fail with a network error. Use **Claude Code** (above) for the full experience.
 
